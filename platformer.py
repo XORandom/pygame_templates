@@ -54,7 +54,7 @@ font_title = pygame.font.SysFont("monospace", 100)
 
 if flag_custom_cursor:
     pygame.mouse.set_visible(False)  # Делаем системный курсор невидимым
-    cursor_image = pygame.image.load('assets/sprite/cursor.png')  # Загружаем картинку курсора
+    cursor_image = pygame.image.load('assets/sprite/ui/cursor.png')  # Загружаем картинку курсора
     cursor_image = pygame.transform.scale(cursor_image, (25, 25))  # Масштабируем до нужного размера
     cursor_image.set_alpha(255)  # Насколько курсор будет видно. 0-255, где 0 - невидимый, 255 - полностью видимый
 

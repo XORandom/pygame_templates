@@ -29,7 +29,7 @@ flag_custom_cursor = True
 
 # Музыка
 pygame.mixer.init()
-pygame.mixer.music.load('assets/music/space_main.ogg')
+pygame.mixer.music.load('assets/music/632269__roloxi__metal-dripsv3.ogg')
 pygame.mixer.music.set_volume(volume)
 pygame.mixer.music.play(-1)
 
@@ -44,9 +44,10 @@ sound_jump = pygame.mixer.Sound('assets/music/264828__cmdrobot__text-message-or-
 sound_button_hold.set_volume(0.9)
 
 # Шрифты
-
 font_text = pygame.font.SysFont("monospace", 30)
+"Шрифт для текста"
 font_title = pygame.font.SysFont("monospace", 100)
+"Шрифт для заголовков"
 
 # Изображения
 # bg = pygame.image.load('assets/bg.png')
@@ -96,8 +97,10 @@ def button(text: str, x: int, y: int, width: int, height: int,
     return return_flag
 
 
+# Загрузка изображений. Я представил 3 способа, можно их комбинировать или выбрать один.
+
 def import_folder(folder_path: str) -> list:
-    """Загрузить в список все спрайты из папки. Этой функции не важны названия изображений или их расширения. \n
+    """ Загрузить в список все спрайты из папки. Этой функции не важны названия изображений или их расширения. \n
     Важно только, чтобы в папке не было ничего лишнего.
     :param folder_path: Полный путь к папке с изображениями.
     :return: На выходе список, содержащий все изображения.
@@ -114,6 +117,48 @@ def import_folder(folder_path: str) -> list:
             surface_list.append(image_surf)
 
     return surface_list
+
+
+def import_folder_dict(folder_path: str) -> dict:
+    """ Загружает все изображения из папки в словарь, полезно, если хочется обращаться к изображениям по имени. \n
+
+    :param folder_path: Полный путь к папке с изображениями.
+    :return: На выходе словарь, содержащий все изображения с ключами в виде их названий.
+    """
+
+    surface_dict = {}
+
+    for _, __, img_files in walk(folder_path):
+        """folder_path = (path, [список папок внутри этой папки], [список img_files]), нам нужно только img_files"""
+        for image in img_files:
+            full_path = folder_path + '/' + image
+            image_surf = pygame.image.load(full_path).convert_alpha()
+            surface_dict[image.split('.')[0]] = image_surf
+
+    return surface_dict
+
+
+def load_sprite(image_name: str, folder_path: str) -> pygame.Surface:
+    """ Функция для загрузки одного изображения
+    :param image_name: Название изображения
+    :param folder_path: Путь к папке с изображением
+    :return: Загруженное изображение
+    """
+    try:
+        image = pygame.image.load(f'{folder_path}/{image_name}')
+    except FileNotFoundError as e:
+        print('File not found, error: ', e)
+        raise SystemExit()
+    return image
+
+# ---------------------------------------------------------------------------------------------------------------------
+
+
+list_1 = import_folder("assets/sprite/player/knight-platformer")
+print(list_1)
+
+dict_1 = import_folder_dict("assets/sprite/player/knight-platformer")
+print(dict_1)
 
 
 def switch_scene(new_scene: str = "exit"):
@@ -191,6 +236,12 @@ def settings():
 def game():
     """Основной игровой цикл"""
 
+    # Меняю музыку
+    pygame.mixer.music.stop()
+    pygame.mixer.music.load("assets/music/19772__amby26__asianbeatz-riff-1.ogg")
+    pygame.mixer.music.set_volume(volume)
+    pygame.mixer.music.play(-1)
+
     while current_scene == "game":
         clock.tick(FPS)
         for event in pygame.event.get():
@@ -205,5 +256,6 @@ def game():
         pygame.display.flip()
 
 
-main_menu()
-pygame.quit()
+if __name__ == '__main__':
+    main_menu()
+    pygame.quit()

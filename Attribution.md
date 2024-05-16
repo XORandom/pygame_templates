@@ -8,6 +8,10 @@ Text-Message or Videogame-Jump by CmdRobot -- https://freesound.org/s/264828/ --
 
 Magic Click by FlechaBr -- https://freesound.org/s/340159/ -- License: Attribution 4.0 
 
+asianbeatz-riff-1.ogg by amby26 -- https://freesound.org/s/19772/ -- License: Sampling+
+
+Metal DripsV3 by Roloxi -- https://freesound.org/s/632269/ -- License: Attribution 4.0
+
 ---
 
 # Sprites

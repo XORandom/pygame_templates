@@ -20,8 +20,9 @@ FPS = 30
 # Игровые переменные
 current_scene: str = "menu"
 "Текущая сцена"
-volume = 0.5
+volume = 0.1
 "Громкость музыки"
+
 
 slow = 8
 "Скорость анимации (idle, hit, game_over)"
@@ -182,6 +183,7 @@ def create_player(pos: tuple = (WIDTH // 2, HEIGHT // 2),
     """
     if status == "idle":
         number_frame = iteration // slow % 4 + 1
+        # +1, так как у нас нет изображения номер 0, регулируя цифры можно брать часть анимаций
         screen.blit(move_set[f"idle ({number_frame}){mirror}"], pos)
     if status == "hit":
         number_frame = iteration // slow % 4 + 1
@@ -190,7 +192,7 @@ def create_player(pos: tuple = (WIDTH // 2, HEIGHT // 2),
         number_frame = iteration // slow % 4 + 1
         screen.blit(move_set[f"game_over ({number_frame}){mirror}"], pos)
     if status == "roll":
-        number_frame = iteration // slow_roll % 8 + 1
+        number_frame = iteration // slow_roll % 7 + 2
         screen.blit(move_set[f"roll ({number_frame}){mirror}"], pos)
     if status == "run":
         number_frame = iteration // slow_run % 16 + 1
@@ -207,12 +209,14 @@ def switch_scene(new_scene: str = "exit"):
     """
     global current_scene
     current_scene = new_scene
-    if current_scene == "game":
-        game()
-    if current_scene == "menu":
-        main_menu()
     if current_scene == "exit":
         exit_screen()
+    elif current_scene == "game":
+        game()
+    elif current_scene == "menu":
+        main_menu()
+    elif current_scene == "settings":
+        settings()
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -261,11 +265,13 @@ def settings():
 
     :return:
     """
+    clock.tick(FPS)
     while current_scene == "settings":
         clock.tick(FPS)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # Нажатие на крестик
                 switch_scene("exit")
+        screen.fill("black")
         pygame.display.flip()
 
 
@@ -281,14 +287,17 @@ def game():
     "Номер кадра игры, используется для анимации"
     direction = pygame.math.Vector2()
     "Направление движения"
-    gravity = 9.8
+    gravity = 19.8
     "Сила гравитации"
+    can_jump = 2
+    "Сколько раз может прыгнуть не касаясь земли"
     status = "idle"
     mirror = ""
     speed = 20
-    jump_speed = 300
+    jump_speed = 0
     x = 0
     y = HEIGHT - 100
+    direction.y = -1
 
     while current_scene == "game":
         clock.tick(FPS)
@@ -297,32 +306,39 @@ def game():
                 switch_scene("exit")
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    direction.y = -1
-                    status = 'roll'
+                    if can_jump > 0:
+                        jump_speed = 50
+                        status = 'roll'
+                        can_jump -= 1
+                        sound_jump.play()
         if current_scene == "exit":  # Прерываем цикл
             break
 
         keys = pygame.key.get_pressed()
         # Движение
 
-
         if keys[pygame.K_d]:
             direction.x = 1
-            status = 'run'
             mirror = ""
         elif keys[pygame.K_a]:
             direction.x = -1
-            status = 'run'
             mirror = "-mirror"
         else:
             direction.x = 0
+
         x += direction.x * speed
         y += direction.y * jump_speed + gravity
 
-        direction.y = 0
+        if jump_speed > 0:
+            jump_speed += -2
 
-        if y > HEIGHT - 100:
+        if y > HEIGHT - 100:  # Уровень пола
             y = HEIGHT - 100
+            can_jump = 2
+            if not keys[pygame.K_d] and not keys[pygame.K_a]:
+                status = 'idle'
+            else:
+                status = 'run'
         screen.fill("white")
         create_player(iteration=iterator, status=status, mirror=mirror, pos=(x, y))
         if flag_custom_cursor:

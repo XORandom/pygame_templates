@@ -8,8 +8,8 @@ WIDTH = 1000
 HEIGHT = 1000
 "Высота окна игры"
 screen = pygame.display.set_mode((WIDTH, HEIGHT))  # Создание окна игры с параметрами ширины и высоты окна
-pygame.display.set_caption("Platformer")  # Название нашей игры
-game_icon = pygame.image.load('assets/sprite/platformer_icon.png')
+pygame.display.set_caption("Top-down")  # Название нашей игры
+game_icon = pygame.image.load('assets/sprite/top-down_icon.png')
 pygame.display.set_icon(game_icon)  # Иконка нашей игры
 
 # Контроль FPS
@@ -141,7 +141,6 @@ def import_folder_dict(folder_path: str) -> dict:
         for image in img_files:
             full_path = folder_path + '/' + image
             image_surf = pygame.image.load(full_path).convert_alpha()
-            image_surf = pygame.transform.scale(image_surf, (100, 100))
             surface_dict[image.split('.')[0]] = image_surf
             image_surf_mirror = pygame.transform.flip(image_surf, True, False)  # Зеркальная копия спрайта
             surface_dict[image.split('.')[0] + "-mirror"] = image_surf_mirror
@@ -166,35 +165,41 @@ def load_sprite(image_name: str, folder_path: str) -> pygame.Surface:
 # ---------------------------------------------------------------------------------------------------------------------
 
 
+list_1 = import_folder("assets/sprite/player/knight-platformer")
+print(list_1)
+
+dict_1 = import_folder_dict("assets/sprite/player/knight-platformer")
+print(dict_1)
+
 move_set = import_folder_dict(folder_path="assets/sprite/player/knight-platformer")
 """Словарь со всеми спрайтами персонажа"""
 
 
 def create_player(pos: tuple = (WIDTH // 2, HEIGHT // 2),
-                  status: str = "idle", iteration: int = 0, mirror: str = ""):
+                  status: str = "idle", iteration: int = 0, direction: str = ""):
     """Функция для рисования персонажа
 
     :param pos: (x, y)
     :param status: Что персонаж делает в данную секунду
     :param iteration: Номер кадра, для анимации
-    :param mirror: В какую сторону смотрит персонаж, "" или "-mirror"
+    :param direction: В какую сторону смотрит персонаж, "" или "-mirror"
     :return:
     """
     if status == "idle":
         number_frame = iteration // slow % 4 + 1
-        screen.blit(move_set[f"idle ({number_frame}){mirror}"], pos)
+        screen.blit(move_set[f"idle ({number_frame}{direction})"], pos)
     if status == "hit":
         number_frame = iteration // slow % 4 + 1
-        screen.blit(move_set[f"hit ({number_frame}){mirror}"], pos)
+        screen.blit(move_set[f"hit ({number_frame}{direction})"], pos)
     if status == "game_over":
         number_frame = iteration // slow % 4 + 1
-        screen.blit(move_set[f"game_over ({number_frame}){mirror}"], pos)
+        screen.blit(move_set[f"game_over ({number_frame}{direction})"], pos)
     if status == "roll":
         number_frame = iteration // slow_roll % 8 + 1
-        screen.blit(move_set[f"roll ({number_frame}){mirror}"], pos)
+        screen.blit(move_set[f"roll ({number_frame}{direction})"], pos)
     if status == "run":
         number_frame = iteration // slow_run % 16 + 1
-        screen.blit(move_set[f"run ({number_frame}){mirror}"], pos)
+        screen.blit(move_set[f"run ({number_frame}{direction})"], pos)
 
 
 def switch_scene(new_scene: str = "exit"):
@@ -226,7 +231,7 @@ def main_menu():
             if event.type == pygame.QUIT:  # Нажатие на крестик
                 switch_scene("exit")
         screen.fill("black")
-        screen.blit(font_title.render("Platformer", True, "white"), (WIDTH // 2 - 250, 50))
+        screen.blit(font_title.render("Top-down", True, "white"), (WIDTH // 2 - 250, 50))
         button("Play", x=WIDTH // 2 - 100, y=200, width=200, height=50,
                action=switch_scene, action_arg="game")
         button("Settings", WIDTH // 2 - 100, 300, 200, 50,
@@ -238,7 +243,6 @@ def main_menu():
         if flag_custom_cursor:
             screen.blit(cursor_image, pygame.mouse.get_pos())
         pygame.display.flip()
-
 
 def exit_screen():
     """ Экран выхода из игры. Нужен чтобы что-то отобразить при выходе из игры.
@@ -279,57 +283,42 @@ def game():
     pygame.mixer.music.play(-1)
     iterator = 0
     "Номер кадра игры, используется для анимации"
-    direction = pygame.math.Vector2()
-    "Направление движения"
-    gravity = 9.8
-    "Сила гравитации"
-    status = "idle"
-    mirror = ""
-    speed = 20
-    jump_speed = 300
-    x = 0
-    y = HEIGHT - 100
 
     while current_scene == "game":
         clock.tick(FPS)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # Нажатие на крестик
                 switch_scene("exit")
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    direction.y = -1
-                    status = 'roll'
         if current_scene == "exit":  # Прерываем цикл
             break
 
         keys = pygame.key.get_pressed()
         # Движение
-
-
-        if keys[pygame.K_d]:
-            direction.x = 1
-            status = 'run'
-            mirror = ""
-        elif keys[pygame.K_a]:
-            direction.x = -1
-            status = 'run'
-            mirror = "-mirror"
+        if keys[pygame.K_w]:
+            self.direction.y = -1
+            self.status = 'up'
+        elif keys[pygame.K_s]:
+            self.direction.y = 1
+            self.status = 'down'
         else:
-            direction.x = 0
-        x += direction.x * speed
-        y += direction.y * jump_speed + gravity
+            self.direction.y = 0
+        if keys[pygame.K_d]:
+            self.direction.x = 1
+            self.status = 'right'
+        elif keys[pygame.K_a]:
+            self.direction.x = -1
+            self.status = 'left'
+        else:
+            self.direction.x = 0
 
-        direction.y = 0
-
-        if y > HEIGHT - 100:
-            y = HEIGHT - 100
         screen.fill("white")
-        create_player(iteration=iterator, status=status, mirror=mirror, pos=(x, y))
+        create_player(iteration=iterator)
         if flag_custom_cursor:
             screen.blit(cursor_image, pygame.mouse.get_pos())
 
         pygame.display.flip()
         iterator += 1
+
 
 
 if __name__ == '__main__':

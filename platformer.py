@@ -1,3 +1,4 @@
+"""Заготовка под игру-платформер"""
 import pygame
 from os import walk
 

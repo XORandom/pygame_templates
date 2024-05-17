@@ -17,3 +17,5 @@ Metal DripsV3 by Roloxi -- https://freesound.org/s/632269/ -- License: Attributi
 # Sprites
 
 knight (https://analogstudios.itch.io/camelot) by analogStudios_: -- Reassembled into separate images by me. -- License: Creative Commons Zero (CC0)
+
+spaceships_vol2 (https://gisha.itch.io/spaceships-2) by gishadev -- License: Creative Commons Zero (CC0)

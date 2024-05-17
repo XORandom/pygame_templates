@@ -1,3 +1,4 @@
+"""Заготовка под игру с видом сверху-вниз"""
 import pygame
 from os import walk
 
@@ -20,7 +21,7 @@ FPS = 30
 # Игровые переменные
 current_scene: str = "menu"
 "Текущая сцена"
-volume = 0.5
+volume = 0.1
 "Громкость музыки"
 
 slow = 8
@@ -121,8 +122,10 @@ def import_folder(folder_path: str) -> list:
         for image in img_files:
             full_path = folder_path + '/' + image
             image_surf = pygame.image.load(full_path).convert_alpha()
+            # Так как все фрагменты имеют разный размер,
+            # то вместо transform.scale() удобнее использовать transform.rotozoom()
+            image_surf = pygame.transform.rotozoom(image_surf, 0, 0.3)
             surface_list.append(image_surf)
-
     return surface_list
 
 
@@ -141,6 +144,7 @@ def import_folder_dict(folder_path: str) -> dict:
         for image in img_files:
             full_path = folder_path + '/' + image
             image_surf = pygame.image.load(full_path).convert_alpha()
+            image_surf = pygame.transform.scale(image_surf, (100, 100))
             surface_dict[image.split('.')[0]] = image_surf
             image_surf_mirror = pygame.transform.flip(image_surf, True, False)  # Зеркальная копия спрайта
             surface_dict[image.split('.')[0] + "-mirror"] = image_surf_mirror
@@ -165,41 +169,24 @@ def load_sprite(image_name: str, folder_path: str) -> pygame.Surface:
 # ---------------------------------------------------------------------------------------------------------------------
 
 
-list_1 = import_folder("assets/sprite/player/knight-platformer")
-print(list_1)
-
-dict_1 = import_folder_dict("assets/sprite/player/knight-platformer")
-print(dict_1)
-
-move_set = import_folder_dict(folder_path="assets/sprite/player/knight-platformer")
+move_set = import_folder(folder_path="assets/sprite/player/spaceship_vol2")
 """Словарь со всеми спрайтами персонажа"""
 
 
-def create_player(pos: tuple = (WIDTH // 2, HEIGHT // 2),
-                  status: str = "idle", iteration: int = 0, direction: str = ""):
+def create_player(pos: list = (WIDTH // 2, HEIGHT // 2),
+                  status: str = "idle", iteration: int = 0, mirror: str = ""):
     """Функция для рисования персонажа
 
     :param pos: (x, y)
     :param status: Что персонаж делает в данную секунду
     :param iteration: Номер кадра, для анимации
-    :param direction: В какую сторону смотрит персонаж, "" или "-mirror"
+    :param mirror: В какую сторону смотрит персонаж, "" или "-mirror"
     :return:
     """
-    if status == "idle":
-        number_frame = iteration // slow % 4 + 1
-        screen.blit(move_set[f"idle ({number_frame}{direction})"], pos)
-    if status == "hit":
-        number_frame = iteration // slow % 4 + 1
-        screen.blit(move_set[f"hit ({number_frame}{direction})"], pos)
-    if status == "game_over":
-        number_frame = iteration // slow % 4 + 1
-        screen.blit(move_set[f"game_over ({number_frame}{direction})"], pos)
-    if status == "roll":
-        number_frame = iteration // slow_roll % 8 + 1
-        screen.blit(move_set[f"roll ({number_frame}{direction})"], pos)
-    if status == "run":
-        number_frame = iteration // slow_run % 16 + 1
-        screen.blit(move_set[f"run ({number_frame}{direction})"], pos)
+
+    screen.blit(move_set[1], pos)
+    screen.blit(move_set[3], (pos[0] + 50, pos[1] + 50))
+
 
 
 def switch_scene(new_scene: str = "exit"):
@@ -212,12 +199,14 @@ def switch_scene(new_scene: str = "exit"):
     """
     global current_scene
     current_scene = new_scene
-    if current_scene == "game":
-        game()
-    if current_scene == "menu":
-        main_menu()
     if current_scene == "exit":
         exit_screen()
+    elif current_scene == "game":
+        game()
+    elif current_scene == "menu":
+        main_menu()
+    elif current_scene == "settings":
+        settings()
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -244,6 +233,7 @@ def main_menu():
             screen.blit(cursor_image, pygame.mouse.get_pos())
         pygame.display.flip()
 
+
 def exit_screen():
     """ Экран выхода из игры. Нужен чтобы что-то отобразить при выходе из игры.
     Если нужно выйти сразу, то цикл можно закомментировать, оставив только pass.
@@ -265,11 +255,13 @@ def settings():
 
     :return:
     """
+    clock.tick(FPS)
     while current_scene == "settings":
         clock.tick(FPS)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # Нажатие на крестик
                 switch_scene("exit")
+        screen.fill("black")
         pygame.display.flip()
 
 
@@ -283,42 +275,56 @@ def game():
     pygame.mixer.music.play(-1)
     iterator = 0
     "Номер кадра игры, используется для анимации"
+    direction = pygame.math.Vector2()
+    "Направление движения"
+    status = "idle"
+    mirror = ""
+    speed = 20
+    jump_speed = 0
+    x = WIDTH // 2
+    y = HEIGHT // 2
 
     while current_scene == "game":
         clock.tick(FPS)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # Нажатие на крестик
                 switch_scene("exit")
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    pass
         if current_scene == "exit":  # Прерываем цикл
             break
 
         keys = pygame.key.get_pressed()
         # Движение
-        if keys[pygame.K_w]:
-            self.direction.y = -1
-            self.status = 'up'
-        elif keys[pygame.K_s]:
-            self.direction.y = 1
-            self.status = 'down'
-        else:
-            self.direction.y = 0
-        if keys[pygame.K_d]:
-            self.direction.x = 1
-            self.status = 'right'
-        elif keys[pygame.K_a]:
-            self.direction.x = -1
-            self.status = 'left'
-        else:
-            self.direction.x = 0
+
+        direction.x = keys[pygame.K_d] - keys[pygame.K_a]
+        direction.y = keys[pygame.K_s] - keys[pygame.K_w]
+
+        if direction.magnitude() != 0:
+            """Нормализация необходима для того, 
+            чтобы при движении по диагонали наша скорость не была выше. 
+            Благодаря нормализации длина вектора direction всегда будет равна 1.
+            Т.е. к примеру без нормализации при движении, если мы движемся со скоростью 1 в одном направлении,
+            с зажатыми кнопками вправо и вверх 
+            мы будем двигаться по диагонали (по теореме Пифагора) со скоростью √2 (~1.41).
+            А с нормализацией будем двигаться по диагонали со скоростью 1.
+            Условие self.direction.magnitude() != 0 необходимо для того, чтобы pygame не выдавал ошибку
+            т.к. нулевой вектор нельзя нормализовать."""
+            direction = direction.normalize()
+
+        x += direction.x * speed
+        y += direction.y * speed
 
         screen.fill("white")
-        create_player(iteration=iterator)
+        create_player(iteration=iterator, status=status, mirror=mirror, pos=[x, y])
         if flag_custom_cursor:
             screen.blit(cursor_image, pygame.mouse.get_pos())
 
         pygame.display.flip()
         iterator += 1
-
+    else:
+        print("Game over")
 
 
 if __name__ == '__main__':

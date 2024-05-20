@@ -1,4 +1,4 @@
-(pygame==2.5.2, python 3.12)
+`pygame==2.5.2, python 3.12`
 
 # Заготовки Pygame 
 

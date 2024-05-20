@@ -21,9 +21,8 @@ FPS = 30
 # Игровые переменные
 current_scene: str = "menu"
 "Текущая сцена"
-volume = 0.1
+volume = 0.01
 "Громкость музыки"
-
 
 slow = 8
 "Скорость анимации (idle, hit, game_over)"
@@ -92,16 +91,20 @@ def button(text: str, x: int, y: int, width: int, height: int,
 
     return_flag = False
     "флаг, говорящий, что на кнопку навели мышку, может пригодиться"
+
+    flag_first_hold = True
+    "флаг, означающий, что мы в первый раз навели на кнопку мышью"
     mouse = pygame.mouse.get_pos()
     click = pygame.mouse.get_pressed()
     if x + width > mouse[0] > x and y + height > mouse[1] > y:  # Если мышь находится внутри прямоугольника
         pygame.draw.rect(screen, active_color, (x, y, width, height))
-        if click[0] == 1 and action is not None:
+        if click[0] == 1 and action is not None and flag_first_hold:
             sound_button_click.play()
             action(action_arg)
-        return_flag = True
+        flag_first_hold= False
     else:
         pygame.draw.rect(screen, inactive_color, (x, y, width, height))
+        flag_first_hold = True
     screen.blit(font_text.render(text, True, (0, 0, 0)), (x + 10, y + 10))  # Рисуем текст на кнопке
     return return_flag
 
@@ -238,6 +241,8 @@ def main_menu():
                action=switch_scene, action_arg="settings")
         button("Exit", WIDTH // 2 - 100, 400, 200, 50,
                action=switch_scene, action_arg="exit")
+        button("Напечатать привет", WIDTH // 2 - 100, 600, 200, 50,
+               action=print, action_arg="Привет")
         if current_scene == "exit":  # Прерываем цикл
             break
         if flag_custom_cursor:

@@ -124,7 +124,7 @@ def import_folder(folder_path: str) -> list:
             image_surf = pygame.image.load(full_path).convert_alpha()
             # Так как все фрагменты имеют разный размер,
             # то вместо transform.scale() удобнее использовать transform.rotozoom()
-            image_surf = pygame.transform.rotozoom(image_surf, 0, 0.3)
+            image_surf = pygame.transform.rotozoom(image_surf, 0, 0.5)
             surface_list.append(image_surf)
     return surface_list
 
@@ -172,21 +172,37 @@ def load_sprite(image_name: str, folder_path: str) -> pygame.Surface:
 move_set = import_folder(folder_path="assets/sprite/player/spaceship_vol2")
 """Словарь со всеми спрайтами персонажа"""
 
+player_width, player_height = move_set[1].get_size()
+# Для того чтобы не проводить сложные расчеты центра вращения и угла, можно создать поверхность,
+# на нее разместить турель и уже её вращать.
+player_surf = pygame.Surface((player_width, player_height), pygame.SRCALPHA)
+player_pos = (WIDTH // 2, HEIGHT // 2)
 
-def create_player(pos: list = (WIDTH // 2, HEIGHT // 2),
-                  status: str = "idle", iteration: int = 0, mirror: str = ""):
+player_surf.blit(move_set[2], (191, 197))
+
+
+def create_player2(player_pos: list | tuple = (WIDTH // 2, HEIGHT // 2),
+                   iteration: int = 0, mirror: str = "", player_angle: float = 0, turret_angle: float = 0) -> None:
     """Функция для рисования персонажа
 
-    :param pos: (x, y)
-    :param status: Что персонаж делает в данную секунду
+    :param player_pos: (x, y) - координаты центра персонажа
+    :param player_angle: Угол поворота персонажа
+    :param turret_angle: Угол поворота турели
     :param iteration: Номер кадра, для анимации
     :param mirror: В какую сторону смотрит персонаж, "" или "-mirror"
     :return:
     """
 
-    screen.blit(move_set[1], pos)
-    screen.blit(move_set[3], (pos[0] + 50, pos[1] + 50))
+    turret_x = player_pos[0] + 50
+    turret_y = player_pos[1] + 50
 
+    # Для того, чтобы не проводить сложные расчеты центра вращения и угла, можно создать поверхность,
+    # на нее разместить корабль со всеми делалями и уже их вращать.
+    point = pygame.math.Vector2(turret_x, turret_y)
+
+    rotated_image = pygame.transform.rotate(move_set[1], player_angle)
+    screen.blit(rotated_image, player_pos)
+    screen.blit(move_set[3], (turret_x, turret_y))
 
 
 def switch_scene(new_scene: str = "exit"):
@@ -273,17 +289,14 @@ def game():
     pygame.mixer.music.load("assets/music/19772__amby26__asianbeatz-riff-1.ogg")
     pygame.mixer.music.set_volume(volume)
     pygame.mixer.music.play(-1)
-    iterator = 0
-    "Номер кадра игры, используется для анимации"
     direction = pygame.math.Vector2()
     "Направление движения"
-    status = "idle"
-    mirror = ""
+    full_rocket = True
     speed = 20
-    jump_speed = 0
-    x = WIDTH // 2
-    y = HEIGHT // 2
-
+    rotate_speed = 10
+    x = 2
+    y = 2
+    angle = 0
     while current_scene == "game":
         clock.tick(FPS)
         for event in pygame.event.get():
@@ -291,7 +304,7 @@ def game():
                 switch_scene("exit")
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    pass
+                    full_rocket = not full_rocket
         if current_scene == "exit":  # Прерываем цикл
             break
 
@@ -315,14 +328,29 @@ def game():
 
         x += direction.x * speed
         y += direction.y * speed
+        angle += (keys[pygame.K_q] - keys[pygame.K_e]) * rotate_speed
 
-        screen.fill("white")
-        create_player(iteration=iterator, status=status, mirror=mirror, pos=[x, y])
+        screen.fill("black")
+
+        rotated_player = pygame.transform.rotate(player_surf, angle)
+        screen.blit(move_set[1], (x, y))  # корабль
+        if full_rocket:
+            screen.blit(move_set[7], (x + 115, y + 230))
+            screen.blit(move_set[7], (x + 270, y + 230))
+        else:
+            screen.blit(move_set[6], (x + 115, y + 233))
+            screen.blit(move_set[6], (x + 270, y + 233))
+
+        screen.blit(rotated_player, rotated_player.get_rect(center=(x + player_width // 2, y + player_height // 2)))
+
+        screen.blit(font_text.render("space - ракеты", True, "white"), (10, 10))
+        screen.blit(font_text.render("q, e - поворот турели", True, "white"), (10, 30))
+        screen.blit(font_text.render("w, s, a, d - движение", True, "white"), (10, 50))
+
         if flag_custom_cursor:
             screen.blit(cursor_image, pygame.mouse.get_pos())
 
         pygame.display.flip()
-        iterator += 1
     else:
         print("Game over")
 

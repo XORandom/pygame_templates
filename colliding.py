@@ -17,9 +17,6 @@ font_text = pygame.font.SysFont("monospace", 30)
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))  # Создание окна игры с параметрами ширины и высоты окна
 pygame.display.set_caption("Collision")  # Название нашей игры
-game_icon = pygame.image.load('assets/sprite/platformer_icon.png')
-pygame.display.set_icon(game_icon)  # Иконка нашей игры
-pygame.display.set_icon(game_icon)
 
 # Квадрат 1
 object1_width = 50

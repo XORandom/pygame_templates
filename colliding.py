@@ -12,6 +12,9 @@ WIDTH = 1000
 HEIGHT = 1000
 "Высота окна игры"
 
+font_text = pygame.font.SysFont("monospace", 30)
+"Шрифт для текста"
+
 screen = pygame.display.set_mode((WIDTH, HEIGHT))  # Создание окна игры с параметрами ширины и высоты окна
 pygame.display.set_caption("Collision")  # Название нашей игры
 game_icon = pygame.image.load('assets/sprite/platformer_icon.png')
@@ -39,7 +42,6 @@ for _ in range(5):
     object2_x = randint(0, WIDTH)
     object2_y = randint(0, HEIGHT)
     object2_list.append((object2_x, object2_y))
-    object2_list_rect.append(pygame.Rect(object2_x, object2_y, object2_width, object2_height))
 
 
 # ------------------
@@ -67,7 +69,6 @@ def collision_fire(x1, y1, w1, h1, x2, y2, w2, h2) -> bool:
 clock = pygame.time.Clock()
 FPS = 30
 
-
 direction = pygame.math.Vector2()
 "Направление движения"
 running = True
@@ -82,11 +83,9 @@ while running:
             if event.key == pygame.K_SPACE:
                 refresh = True
 
-
     if refresh:
         for i, (object2_x, object2_y) in enumerate(object2_list):
             object2_list[i] = (randint(0, WIDTH), randint(0, HEIGHT))
-            object2_list_rect[i] = pygame.Rect(object2_x, object2_y, object2_width, object2_height)
         refresh = False
         object1.fill("black")
 
@@ -114,11 +113,8 @@ while running:
     object1_rect = pygame.Rect(object1_x, object1_y, object1_width, object1_height)
 
     for object2_x, object2_y in object2_list:
-        if collision_fire(object1_x, object1_y, object1_width, object1_height, object2_x, object2_y, object2_width, object2_height):
-            object1.fill('red')
-
-    for object2_rect in object2_list_rect:
-        if object1_rect.colliderect(object2_rect.x, object2_rect.y, object2_rect.width, object2_rect.height):
+        if collision_fire(object1_x, object1_y, object1_width, object1_height,
+                          object2_x, object2_y, object2_width, object2_height):
             object1.fill('red')
 
     # фон
@@ -128,6 +124,12 @@ while running:
     # water
     for object2_x, object2_y in object2_list:
         screen.blit(object2, (object2_x, object2_y))
+
+    screen.blit(font_text.render("space - сбросить, поменяв расположение прямоугольников",
+                                 True, "black"), (10, 10))
+    screen.blit(font_text.render("w, s, a, d - движение", True, "black"), (10, 30))
+    screen.blit(font_text.render("при касании черный прямоугольник становится красным",
+                                 True, "black"), (10, 50))
 
     pygame.display.flip()
     clock.tick(FPS)

@@ -44,7 +44,7 @@ slow_roll = 4
 "Скорость анимации (roll)"
 slow_run = 2
 "Скорость анимации (run)"
-barrel_offset = (0, 80)
+barrel_offset = (0, 0)
 "Настраиваемое смещение дула турели"
 
 # Флаги
@@ -225,10 +225,14 @@ def find_all_poi(image_name: str, folder_path: str) -> dict:
     rocket_ponts=np.where(np.all((im_arr==rocket_ponts_color),axis=-1))
     "Находим коодинаты ракетных установок"
     # Добавляем информацию в словарь
-    points_dict["rl1"] = (rocket_ponts[1][0].item()*image_scale, 
-                          rocket_ponts[0][0].item()*image_scale)
-    points_dict["rl2"] = (rocket_ponts[1][1].item()*image_scale, 
-                          rocket_ponts[0][1].item()*image_scale)
+    points_dict["rl1"] = (94*image_scale,  # y
+                          499*image_scale)   # x
+    points_dict["rl2"] = (673*image_scale,
+                          499*image_scale)
+    # points_dict["rl1"] = (rocket_ponts[1][0].item()*image_scale, 
+                        #   rocket_ponts[0][0].item()*image_scale)
+    # points_dict["rl2"] = (rocket_ponts[1][1].item()*image_scale, 
+    #                       rocket_ponts[0][1].item()*image_scale)
     # -------------------------------------------------------------
     veapon_ponts_color=np.array([0,255,254],dtype=np.uint8)
     "цвет ключевых точек для остновных орудий [0,255,254]"
@@ -474,19 +478,21 @@ def game():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 3:  # Правая кнопка мыши
                     # Создаём снаряд
+                    total_angle = math.radians(angle_ship + angle_turret - 90)  # Общий угол, меньше расчётов
+                    
                     # здесь необходимы базовые тригонометрические знания, вкратце, sin используется для оси y, cos для оси x
                     # функция sin(угол) возвращает значения в диапазоне [-1, 1]
                     # надо представить прямоугольный треугольник с заданным углом
                     # sin(заданный угол) возвращает значение противоположной (углу) стороны треугольника (катета), делённое на гипотенузу
                     # есть еще арктангенс для обеих осей
-                    total_angle = math.radians(angle_ship + angle_turret - 90)  # Общий угол
+                    offset_x = barrel_offset[0] * math.cos(total_angle)
+                    offset_y = barrel_offset[0] * math.sin(total_angle)
+                    
                     # Так как наш корабль тоже поворачивается, надо это учитывать
-                    direction_x = math.cos(math.radians(angle_ship+angle_turret-90)) # -90, так как турель по умолчанию повернута вниз, а не вправо 
-                    direction_y = -math.sin(math.radians(angle_ship+angle_turret-90))  # -math, т.к. Y растёт вниз
+                    direction_x = math.cos(total_angle) # -90, так как турель по умолчанию повернута вниз, а не вправо 
+                    direction_y = -math.sin(total_angle)  # -math, т.к. Y растёт вниз
                     # Поворачиваем смещение дула на угол турели
-                    offset_x = 0
-                    offset_y = 0
-                    projectile: dict = create_projectile(x+offset_x, y+offset_y, direction_x, direction_y, 10)
+                    projectile: dict = create_projectile(x+offset_x, y+offset_y, direction_x, direction_y, 30)
                     projectiles.append(projectile)
 
         if current_scene == "exit":  # Прерываем цикл

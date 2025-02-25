@@ -44,6 +44,8 @@ slow_roll = 4
 "Скорость анимации (roll)"
 slow_run = 2
 "Скорость анимации (run)"
+barrel_offset = (0, 80)
+"Настраиваемое смещение дула турели"
 
 # Флаги
 flag_custom_cursor = True
@@ -73,6 +75,7 @@ font_title = pygame.font.SysFont("monospace", 100)
 
 # Изображения
 # bg = pygame.image.load('assets/bg.png')
+
 
 
 if flag_custom_cursor:
@@ -450,7 +453,8 @@ def game():
     "Направление движения"
     full_rocket = True
     speed = 20
-    rotate_speed = 10
+    rotate_speed_ship = 10 # скорость 
+    rotate_speed_turret = 10 # скорость 
     x = 2
     y = 2
     angle_turret = 180
@@ -470,9 +474,19 @@ def game():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 3:  # Правая кнопка мыши
                     # Создаём снаряд
-                    direction_x = math.cos(math.radians(angle_turret-90)) # -90, так как турель по умолчанию повернута вниз, а не вправо 
-                    direction_y = -math.sin(math.radians(angle_turret-90))  # -math, т.к. Y растёт вниз
-                    projectile: dict = create_projectile(x, y, direction_x, direction_y, 10)
+                    # здесь необходимы базовые тригонометрические знания, вкратце, sin используется для оси y, cos для оси x
+                    # функция sin(угол) возвращает значения в диапазоне [-1, 1]
+                    # надо представить прямоугольный треугольник с заданным углом
+                    # sin(заданный угол) возвращает значение противоположной (углу) стороны треугольника (катета), делённое на гипотенузу
+                    # есть еще арктангенс для обеих осей
+                    total_angle = math.radians(angle_ship + angle_turret - 90)  # Общий угол
+                    # Так как наш корабль тоже поворачивается, надо это учитывать
+                    direction_x = math.cos(math.radians(angle_ship+angle_turret-90)) # -90, так как турель по умолчанию повернута вниз, а не вправо 
+                    direction_y = -math.sin(math.radians(angle_ship+angle_turret-90))  # -math, т.к. Y растёт вниз
+                    # Поворачиваем смещение дула на угол турели
+                    offset_x = 0
+                    offset_y = 0
+                    projectile: dict = create_projectile(x+offset_x, y+offset_y, direction_x, direction_y, 10)
                     projectiles.append(projectile)
 
         if current_scene == "exit":  # Прерываем цикл
@@ -481,34 +495,59 @@ def game():
         keys = pygame.key.get_pressed()
         # Движение
 
-        direction.x = keys[pygame.K_d] - keys[pygame.K_a]
-        direction.y = keys[pygame.K_s] - keys[pygame.K_w]
+        # direction.x = keys[pygame.K_d] - keys[pygame.K_a]
+        # direction.y = keys[pygame.K_s] - keys[pygame.K_w]
+        # if direction.magnitude() != 0:
+        #     """Нормализация необходима для того, 
+        #     чтобы при движении по диагонали наша скорость не была выше. 
+        #     Благодаря нормализации длина вектора direction всегда будет равна 1.
+        #     Т.е. к примеру без нормализации при движении, если мы движемся со скоростью 1 в одном направлении,
+        #     с зажатыми кнопками вправо и вверх 
+        #     мы будем двигаться по диагонали (по теореме Пифагора) со скоростью √2 (~1.41).
+        #     А с нормализацией будем двигаться по диагонали со скоростью 1.
+        #     Условие self.direction.magnitude() != 0 необходимо для того, чтобы pygame не выдавал ошибку
+        #     т.к. нулевой вектор нельзя нормализовать."""
+        #     direction = direction.normalize()
 
-        if direction.magnitude() != 0:
-            """Нормализация необходима для того, 
-            чтобы при движении по диагонали наша скорость не была выше. 
-            Благодаря нормализации длина вектора direction всегда будет равна 1.
-            Т.е. к примеру без нормализации при движении, если мы движемся со скоростью 1 в одном направлении,
-            с зажатыми кнопками вправо и вверх 
-            мы будем двигаться по диагонали (по теореме Пифагора) со скоростью √2 (~1.41).
-            А с нормализацией будем двигаться по диагонали со скоростью 1.
-            Условие self.direction.magnitude() != 0 необходимо для того, чтобы pygame не выдавал ошибку
-            т.к. нулевой вектор нельзя нормализовать."""
-            direction = direction.normalize()
+        # x += direction.x * speed
+        # y += direction.y * speed
 
-        x += direction.x * speed
-        y += direction.y * speed
-        angle_turret += (keys[pygame.K_q] - keys[pygame.K_e]) * rotate_speed
-        angle_ship += (keys[pygame.K_x] - keys[pygame.K_c]) * rotate_speed
+
+        """ Вот так выглядит направление
+                90
+        180     @       0
+                270
+        
+        """
+        if keys[pygame.K_a]:
+            angle_ship += rotate_speed_ship
+        if keys[pygame.K_d]:
+            angle_ship -= rotate_speed_ship
+        if keys[pygame.K_w]:
+            x += speed * math.cos(math.radians(angle_ship+90))# +90 потому, что корабль повернут влево, относительно нулевой точки (это напрвление вправо)
+            y -= speed * math.sin(math.radians(angle_ship+90))  # Y растёт вниз, поэтому '-'
+        if keys[pygame.K_s]:
+            x -= speed * math.cos(math.radians(angle_ship+90))
+            y += speed * math.sin(math.radians(angle_ship+90))  # Движение назад
+
+        angle_turret += (keys[pygame.K_q] - keys[pygame.K_e]) * rotate_speed_turret
+        angle_ship += (keys[pygame.K_x] - keys[pygame.K_c]) * rotate_speed_ship
+
+        # Теперь топология этой вселенной - бублик
+        x = x % (WIDTH + 100)
+        y = y % (HEIGHT+ 100)
+
 
 
         screen.fill("black")
 
-        render_ship(turret_angle=angle_turret, player_pos=(x,y), player_angle=angle_ship)
+        render_ship(turret_angle=angle_turret, player_pos=(x,y), player_angle=angle_ship, full_rocket=full_rocket)
 
         screen.blit(font_text.render("space - ракеты", True, "white"), (10, 10))
-        screen.blit(font_text.render("q, e - поворот турели", True, "white"), (10, 30))
-        screen.blit(font_text.render("w, s, a, d - движение", True, "white"), (10, 50))
+        # screen.blit(font_text.render("q, e - поворот турели", True, "white"), (10, 30))
+        # screen.blit(font_text.render("w, s, a, d - движение", True, "white"), (10, 50))
+        screen.blit(font_text.render("w, s - движение вперёд/назад", True, "white"), (10, 50))
+        screen.blit(font_text.render("a, d - поворот корабля", True, "white"), (10, 70))
         screen.blit(font_text.render("ПКМ - стрельба", True, "white"), (10, 70)) 
 
 

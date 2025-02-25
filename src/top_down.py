@@ -11,6 +11,7 @@
 """Заготовка под игру с видом сверху-вниз"""
 import pygame
 import numpy as np
+import math
 from os import walk
 
 pygame.init()
@@ -272,12 +273,6 @@ player_surf = pygame.Surface((player_width, player_height), pygame.SRCALPHA)
 def create_ship() -> None:
     """Функция для создания корабля
 
-
-    :param iteration: Номер кадра, для анимации
-    :param player_pos: (x, y) - координаты центра персонажа
-    :param player_angle: Угол поворота персонажа
-    :param turret_angle: Угол поворота турели
-    :return: ничего, но на экране должен отрисоваться корабль
     """
     pass
 
@@ -296,8 +291,6 @@ def render_ship(full_rocket: bool = True,
     :param turret_angle: Угол поворота турели
     :return: ничего, но на экране должен отрисоваться корабль
     """
-
-
 
 
     # Размещаем корабль на поверхности
@@ -408,6 +401,43 @@ def settings():
         pygame.display.flip()
 
 
+def create_projectile(pr_x: int, pr_y: int, pr_dir_x: float, pr_dir_y: float, pr_speed:int=10) -> dict:
+    """
+    Если знаете, что такое Класс, переделайте в него, это будет гораздо проще
+
+    создает словарь, содержащий основные данные нашего снаряда, его коодинаты, скорость
+    :param pr_x: текущая координата x
+    :param pr_y: текущая координата y
+    :param pr_dir_x: напрвление движения по x
+    :param pr_dir_y: напрвление движения по y
+    :param pr_speed: скорость
+    :return: 
+    """
+    projectile_data = {
+        "x":pr_x,
+        "y":pr_y,
+        "dir_x":pr_dir_x,
+        "dir_y":pr_dir_y,
+        "speed":pr_speed,
+    }
+    return projectile_data
+
+
+def update_projectile(projectiles: list[dict]):
+    """
+    Обновляем все существуюшие в игре снаряды
+
+
+    """
+    for projectile in projectiles:
+        projectile["x"] += projectile["dir_x"] * projectile["speed"]
+        projectile["y"] += projectile["dir_y"] * projectile["speed"]
+        pygame.draw.circle(screen, (255, 0, 0), (int(projectile["x"]), int(projectile["y"])), 5)
+
+    # Удаляем снаряды, вышедшие за пределы экрана
+    projectiles = [p for p in projectiles if 0 < p["x"] < WIDTH and 0 < p["y"] < HEIGHT]
+
+
 def game():
     """Основной игровой цикл"""
 
@@ -423,8 +453,12 @@ def game():
     rotate_speed = 10
     x = 2
     y = 2
-    angle_turret = 0
+    angle_turret = 180
     angle_ship = 0
+    projectiles = []
+    "Список для хранения снарядов"
+
+
     while current_scene == "game":
         clock.tick(FPS)
         for event in pygame.event.get():
@@ -433,6 +467,14 @@ def game():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     full_rocket = not full_rocket
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 3:  # Правая кнопка мыши
+                    # Создаём снаряд
+                    direction_x = math.cos(math.radians(angle_turret-90)) # -90, так как турель по умолчанию повернута вниз, а не вправо 
+                    direction_y = -math.sin(math.radians(angle_turret-90))  # -math, т.к. Y растёт вниз
+                    projectile: dict = create_projectile(x, y, direction_x, direction_y, 10)
+                    projectiles.append(projectile)
+
         if current_scene == "exit":  # Прерываем цикл
             break
 
@@ -467,6 +509,10 @@ def game():
         screen.blit(font_text.render("space - ракеты", True, "white"), (10, 10))
         screen.blit(font_text.render("q, e - поворот турели", True, "white"), (10, 30))
         screen.blit(font_text.render("w, s, a, d - движение", True, "white"), (10, 50))
+        screen.blit(font_text.render("ПКМ - стрельба", True, "white"), (10, 70)) 
+
+
+        update_projectile(projectiles)
 
         if flag_custom_cursor:
             screen.blit(cursor_image, pygame.mouse.get_pos())

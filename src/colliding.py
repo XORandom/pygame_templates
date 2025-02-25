@@ -33,6 +33,7 @@ object2.fill("blue")
 object2_width = object2.get_width()
 object2_height = object2.get_height()
 
+# Задаем им случайные координаты
 object2_list = []
 object2_list_rect = []
 for _ in range(5):

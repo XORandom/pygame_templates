@@ -1,9 +1,12 @@
 [project]
 name = "pygame-templates"
-version = "0.1.1"
+version = "0.1.2"
 description = "Examples of game blanks using the pygame, for beginners"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "image>=1.5.33",
+    "numpy>=2.2.3",
+    "pillow>=11.1.0",
     "pygame-ce>=2.5.3",
 ]

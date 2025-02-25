@@ -1,5 +1,16 @@
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+# pygame-ce,
+# numpy
+# ]
+# [tool.uv]
+# exclude-newer = "2025-02-12T00:00:00Z"
+# ///
+
 """Заготовка под игру с видом сверху-вниз"""
 import pygame
+import numpy as np
 from os import walk
 
 pygame.init()
@@ -23,6 +34,8 @@ current_scene: str = "menu"
 "Текущая сцена"
 volume = 0.1
 "Громкость музыки"
+image_scale = 0.5
+"масштаб изображенйи в игре"
 
 slow = 8
 "Скорость анимации (idle, hit, game_over)"
@@ -124,7 +137,7 @@ def import_folder(folder_path: str) -> list:
             image_surf = pygame.image.load(full_path).convert_alpha()
             # Так как все фрагменты имеют разный размер,
             # то вместо transform.scale() удобнее использовать transform.rotozoom()
-            image_surf = pygame.transform.rotozoom(image_surf, 0, 0.5)
+            image_surf = pygame.transform.rotozoom(image_surf, 0, image_scale)
             surface_list.append(image_surf)
     return surface_list
 
@@ -144,7 +157,8 @@ def import_folder_dict(folder_path: str) -> dict:
         for image in img_files:
             full_path = folder_path + '/' + image
             image_surf = pygame.image.load(full_path).convert_alpha()
-            image_surf = pygame.transform.scale(image_surf, (100, 100))
+            image_surf = pygame.transform.rotozoom(image_surf, 0, image_scale)
+            # image_surf = pygame.transform.scale(image_surf, (100, 100))# либо можно задать размер изображений
             surface_dict[image.split('.')[0]] = image_surf
             image_surf_mirror = pygame.transform.flip(image_surf, True, False)  # Зеркальная копия спрайта
             surface_dict[image.split('.')[0] + "-mirror"] = image_surf_mirror
@@ -161,48 +175,160 @@ def load_sprite(image_name: str, folder_path: str) -> pygame.Surface:
     try:
         image = pygame.image.load(f'{folder_path}/{image_name}')
     except FileNotFoundError as e:
-        print('File not found, error: ', e)
+        print('Изображение не найдено, ошибка: ', e)
         raise SystemExit()
     return image
 
+
+def find_all_poi(image_name: str, folder_path: str) -> dict:
+    """ 
+    Позволяет отпределить координаты точек интереса
+    
+    """
+    import PIL.Image
+    try:
+        image = PIL.Image.open(f'{folder_path}/{image_name}').convert("RGB")
+    except FileNotFoundError as e:
+        print('Изображение не найдено, ошибка: ', e)
+        raise SystemExit()
+    
+    points_dict: dict = {
+        "turret":(0, 0),    # центр вращения турели
+        "wep1":(0, 0),      # центр основного оружия
+        "wep2":(0, 0),      # центр основного оружия
+        "rl1":(0, 0),       # центр ракетной установки
+        "rl2":(0, 0),       # центр ракетной установки
+        }
+    "словарь, к который мы сохраняем координаты"
+
+    # так как картинки расположены не прямо в левом верхнем углу, нам нужны смещения
+
+
+    # Вычисляем где должны располагаться центр орудий, турели и т.д.
+    # это делается за счёт указанный на изображении ярких точек
+    # для ускорения вычислений, используем numpy
+    im_arr = np.array(image)
+    # -------------------------------------------------------------
+    turret_pont_color=np.array([255,0,255],dtype=np.uint8)
+    "цвет ключевой точки для туррели [255,0,255] На изображении не увидеть эту точку, поскольку она прозрачная (alpha=0)"
+    turret_point=np.where(np.all((im_arr==turret_pont_color),axis=-1))
+    "Находим коодинату центра туррели (для данного рисунка, центр туррели на 1 пиксель левее)"
+    # Добавляем информацию в словарь
+    points_dict["turret"] = (turret_point[0][0].item()*image_scale, turret_point[1][0].item()*image_scale)
+    # -------------------------------------------------------------
+    rocket_ponts_color=np.array([0,255,255],dtype=np.uint8)
+    "цвет ключевых точек для ракетных установок [0,255,255]"
+    rocket_ponts=np.where(np.all((im_arr==rocket_ponts_color),axis=-1))
+    "Находим коодинаты ракетных установок"
+    # Добавляем информацию в словарь
+    points_dict["rl1"] = (rocket_ponts[1][0].item()*image_scale, 
+                          rocket_ponts[0][0].item()*image_scale)
+    points_dict["rl2"] = (rocket_ponts[1][1].item()*image_scale, 
+                          rocket_ponts[0][1].item()*image_scale)
+    # -------------------------------------------------------------
+    veapon_ponts_color=np.array([0,255,254],dtype=np.uint8)
+    "цвет ключевых точек для остновных орудий [0,255,254]"
+    veapon_ponts=np.where(np.all((im_arr==veapon_ponts_color),axis=-1))
+    "Находим коодинаты ракетных установок"
+    # Добавляем информацию в словарь
+    points_dict["wep1"] = (veapon_ponts[1][0].item()*image_scale, 
+                           veapon_ponts[0][0].item()*image_scale)
+    points_dict["wep2"] = (veapon_ponts[1][1].item()*image_scale, 
+                           veapon_ponts[0][1].item()*image_scale)
+    # -------------------------------------------------------------
+
+    # Оставляю для того, чтобы было легче разобраться с тем, что происходит. Можно раскомментировать две строчки ниже и посмотреть
+    # print(f"turret_point{turret_point}, rocket_ponts{rocket_ponts}, veapon_ponts {veapon_ponts}")
+    # print(points_dict)
+    return points_dict
+
+
+def centered_images(poi: dict, images_list: list) -> dict:
+    """
+
+    Берет массив точек интереса find_all_poi() и указывает нужные координаты центра с учетом размера изображений
+
+    :param poi: Интересуемая позиция
+    :param images_list: Загруженные изображений
+    :return: Координаты точек с учетом корреции
+    """
+
+    pass
 
 # ---------------------------------------------------------------------------------------------------------------------
 
 
 move_set = import_folder(folder_path="assets/sprite/player/spaceship_vol2")
 """Словарь со всеми спрайтами персонажа"""
-
+points_dict = find_all_poi("large_2.png",folder_path="assets/sprite/player/spaceship_vol2")
+"словарь с координатами ключевых точек"
+# Ширина и высота корабля соответствуют изображению
 player_width, player_height = move_set[1].get_size()
-# Для того чтобы не проводить сложные расчеты центра вращения и угла, можно создать поверхность,
-# на нее разместить турель и уже её вращать.
+print(move_set[1].get_size())
+# Теперь создаем поверхность заданного размера
 player_surf = pygame.Surface((player_width, player_height), pygame.SRCALPHA)
-player_pos = (WIDTH // 2, HEIGHT // 2)
+"поверхность, на которйо расположен наш корабль"
 
-player_surf.blit(move_set[2], (191, 197))
+def create_ship() -> None:
+    """Функция для создания корабля
 
 
-def create_player2(player_pos: list | tuple = (WIDTH // 2, HEIGHT // 2),
-                   iteration: int = 0, mirror: str = "", player_angle: float = 0, turret_angle: float = 0) -> None:
-    """Функция для рисования персонажа
-
+    :param iteration: Номер кадра, для анимации
     :param player_pos: (x, y) - координаты центра персонажа
     :param player_angle: Угол поворота персонажа
     :param turret_angle: Угол поворота турели
+    :return: ничего, но на экране должен отрисоваться корабль
+    """
+    pass
+
+
+
+def render_ship(full_rocket: bool = True, 
+                player_pos: list | tuple = (WIDTH // 2, HEIGHT // 2), 
+                player_angle: float = 0.0, 
+                turret_angle: float = 0) -> None:
+    """Функция для отображения корабля
+
+
     :param iteration: Номер кадра, для анимации
-    :param mirror: В какую сторону смотрит персонаж, "" или "-mirror"
-    :return:
+    :param player_pos: (x, y) - координаты центра персонажа
+    :param player_angle: Угол поворота персонажа
+    :param turret_angle: Угол поворота турели
+    :return: ничего, но на экране должен отрисоваться корабль
     """
 
-    turret_x = player_pos[0] + 50
-    turret_y = player_pos[1] + 50
 
-    # Для того, чтобы не проводить сложные расчеты центра вращения и угла, можно создать поверхность,
-    # на нее разместить корабль со всеми делалями и уже их вращать.
-    point = pygame.math.Vector2(turret_x, turret_y)
 
-    rotated_image = pygame.transform.rotate(move_set[1], player_angle)
-    screen.blit(rotated_image, player_pos)
-    screen.blit(move_set[3], (turret_x, turret_y))
+
+    # Размещаем корабль на поверхности
+    player_surf.blit(move_set[1], (0,0))
+
+    # Размещаем боковые орудия
+    player_surf.blit(move_set[3], points_dict["wep1"])
+    player_surf.blit(pygame.transform.flip(move_set[3], True, False), points_dict["wep2"])
+
+    # размещаем ракеты
+    # Показывать ракеты?
+    if full_rocket:
+        player_surf.blit(move_set[7], points_dict["rl1"])
+        player_surf.blit(move_set[7], points_dict["rl2"])
+    else:
+        player_surf.blit(move_set[6], points_dict["rl1"])
+        player_surf.blit(move_set[6], points_dict["rl2"])
+
+    # Размещаем турель
+    turret_image_copy = pygame.transform.rotate(move_set[2], turret_angle)
+    "во время вращения изображение меняется, сохраняем копию для того, чтобы узнать его ширину и высоту"
+    # Для того, чтобы изображение вращалось правильно нужно вычесть половину ширины и высоты из координат
+    player_surf.blit(turret_image_copy, (points_dict["turret"][0]-turret_image_copy.get_width()/2,
+                                         points_dict["turret"][1]-turret_image_copy.get_height()/2
+                                         ))
+
+    rotated_player_surf = pygame.transform.rotate(player_surf, player_angle)
+    screen.blit(rotated_player_surf, (
+                player_pos[0] - rotated_player_surf.get_width()/2,
+                player_pos[1] - rotated_player_surf.get_height()/2
+                ))
 
 
 def switch_scene(new_scene: str = "exit"):
@@ -278,6 +404,7 @@ def settings():
             if event.type == pygame.QUIT:  # Нажатие на крестик
                 switch_scene("exit")
         screen.fill("black")
+        screen.blit(font_text.render("Это настройки!", True, "white"), (50, 50))
         pygame.display.flip()
 
 
@@ -296,7 +423,8 @@ def game():
     rotate_speed = 10
     x = 2
     y = 2
-    angle = 0
+    angle_turret = 0
+    angle_ship = 0
     while current_scene == "game":
         clock.tick(FPS)
         for event in pygame.event.get():
@@ -328,20 +456,13 @@ def game():
 
         x += direction.x * speed
         y += direction.y * speed
-        angle += (keys[pygame.K_q] - keys[pygame.K_e]) * rotate_speed
+        angle_turret += (keys[pygame.K_q] - keys[pygame.K_e]) * rotate_speed
+        angle_ship += (keys[pygame.K_x] - keys[pygame.K_c]) * rotate_speed
+
 
         screen.fill("black")
 
-        rotated_player = pygame.transform.rotate(player_surf, angle)
-        screen.blit(move_set[1], (x, y))  # корабль
-        if full_rocket:
-            screen.blit(move_set[7], (x + 115, y + 230))
-            screen.blit(move_set[7], (x + 270, y + 230))
-        else:
-            screen.blit(move_set[6], (x + 115, y + 233))
-            screen.blit(move_set[6], (x + 270, y + 233))
-
-        screen.blit(rotated_player, rotated_player.get_rect(center=(x + player_width // 2, y + player_height // 2)))
+        render_ship(turret_angle=angle_turret, player_pos=(x,y), player_angle=angle_ship)
 
         screen.blit(font_text.render("space - ракеты", True, "white"), (10, 10))
         screen.blit(font_text.render("q, e - поворот турели", True, "white"), (10, 30))

@@ -2,7 +2,10 @@
 # requires-python = ">=3.12"
 # dependencies = [
 # pygame-ce,
-# numpy
+# numpy,
+# math,
+# json,
+# PIL
 # ]
 # [tool.uv]
 # exclude-newer = "2025-02-12T00:00:00Z"
@@ -12,39 +15,70 @@
 import pygame
 import numpy as np
 import math
+import json
 from os import walk
+
+
+
+
+# Сохранение и загрузка позволяют нам работать с настройками пользователя
+# а также сохранять прогресс и уровни
+user_settings_dict = {}
+
+def save_game_data(data: list):
+    """
+    Сохраняем данные в JSON. 
+
+
+    :param data: список, содержит ровно 1 ключ и 1 значение, которое в данный момент изменяется
+    :return:
+    """
+    user_settings_dict[data[0]] = data[1]
+
+    # json_object = json.dumps(user_settings_dict, indent=4)
+    # with open("./user_data/user_settings.json", "w") as outfile:
+    #     outfile.write(json_object)
+    # Или так
+    with open("./user_data/user_settings.json", "w") as outfile:
+        json.dump(user_settings_dict, outfile)
+    pass
+
+def load_game_data():
+    with open("./user_data/user_settings.json", "r") as openfile:
+        user_settings_dict = json.load(openfile)
+    return user_settings_dict
+
+user_settings_dict = load_game_data()
+
 
 pygame.init()
 
-WIDTH = 1000
+WIDTH = user_settings_dict["widht"]
 "Ширина окна игры"
-HEIGHT = 1000
+HEIGHT = user_settings_dict["height"]
 "Высота окна игры"
 screen = pygame.display.set_mode((WIDTH, HEIGHT))  # Создание окна игры с параметрами ширины и высоты окна
 pygame.display.set_caption("Top-down")  # Название нашей игры
 game_icon = pygame.image.load('assets/sprite/top-down_icon.png')
 pygame.display.set_icon(game_icon)  # Иконка нашей игры
+grab_cursor: bool = user_settings_dict["grab_cursor"]
+"""Курсор заблокирован"""
+pygame.event.set_grab(grab_cursor)  # Блокирует перемещение мыши за границу экрана
 
 # Контроль FPS
 clock = pygame.time.Clock()
-FPS = 30
+FPS = user_settings_dict["fps"]
 "Скорость игры"
 
 # Игровые переменные
 current_scene: str = "menu"
 "Текущая сцена"
-volume = 0.1
+volume = user_settings_dict["volume"]
 "Громкость музыки"
-image_scale = 0.5
+image_scale = user_settings_dict["image_scale"]
 "масштаб изображенйи в игре"
 
-slow = 8
-"Скорость анимации (idle, hit, game_over)"
-slow_roll = 4
-"Скорость анимации (roll)"
-slow_run = 2
-"Скорость анимации (run)"
-barrel_offset = (0, 0)
+barrel_offset = (100, 0) * image_scale
 "Настраиваемое смещение дула турели"
 
 # Флаги
@@ -86,6 +120,10 @@ if flag_custom_cursor:
 
 # Игровые функции
 """Игра, меню, настройки, главный экран - это все игровые циклы. Я могу поочередно переключать их"""
+
+
+
+
 
 
 def button(text: str, x: int, y: int, width: int, height: int,
@@ -299,7 +337,7 @@ def render_ship(full_rocket: bool = True,
     :return: ничего, но на экране должен отрисоваться корабль
     """
 
-
+    player_surf.fill(pygame.Color(0,0,0,0))
     # Размещаем корабль на поверхности
     player_surf.blit(move_set[1], (0,0))
 
@@ -405,6 +443,19 @@ def settings():
                 switch_scene("exit")
         screen.fill("black")
         screen.blit(font_text.render("Это настройки!", True, "white"), (50, 50))
+
+        button("Settings", WIDTH // 2 - 100, 400, 200, 50,
+                action=switch_scene, action_arg="settings")
+        button(f"Масштабирование | {grab_cursor}", WIDTH // 2 - 100, 500, 200, 50,
+                action=save_game_data, action_arg=["image_scale", 1])
+        button(f"Захват курсора | {grab_cursor}", WIDTH // 2 - 100, 600, 200, 50,
+                action=save_game_data, action_arg=["grab_cursor", False])
+        button(f"Громкость музыки | {volume}", WIDTH // 2 - 100, 700, 200, 50,
+                action=save_game_data, action_arg=["volume", 0])
+        button("Выход", WIDTH // 2 - 100, 800, 200, 50,
+                action=switch_scene, action_arg="exit")
+        if flag_custom_cursor:
+            screen.blit(cursor_image, pygame.mouse.get_pos())
         pygame.display.flip()
 
 
@@ -445,6 +496,39 @@ def update_projectile(projectiles: list[dict]):
     projectiles = [p for p in projectiles if 0 < p["x"] < WIDTH and 0 < p["y"] < HEIGHT]
 
 
+def update_homing_projectile(projectiles: list[dict], target: list|tuple):
+    """
+    Обновляем самонаводящиеся снаряды
+    Пока что все они будут преследовать одну цель
+    Это можно при желании изменить
+
+    """
+
+
+    
+    for projectile in projectiles:
+        # Находим евклидово расстояние до цели
+        # dist_to_target = math.sqrt(pow(projectile["x"]-target.x, 2)+pow(projectile["y"]-target.y, 2))
+        # или так, находим гипотенузу
+        # dist_to_target = math.hypot(target.x - projectile["x"], target.y - pow(projectile["y"])
+        # или используя встроенные функции
+        dist_to_target = pygame.math.Vector2(projectile["x"], projectile["y"]).distance_to((target.x, target.y))
+
+        # находим угол до цели
+        angle_to_target = pygame.math.Vector2().angle_to(dist_to_target)
+        print(f"{dist_to_target} an {angle_to_target}")
+
+        projectile["dir_x"] = angle_to_target.x
+        projectile["dir_y"] = angle_to_target.y
+
+
+        projectile["x"] += projectile["dir_x"] * projectile["speed"]
+        projectile["y"] += projectile["dir_y"] * projectile["speed"]
+
+
+    pass
+
+
 def game():
     """Основной игровой цикл"""
 
@@ -464,6 +548,8 @@ def game():
     angle_turret = 180
     angle_ship = 0
     projectiles = []
+    offset_x = 0
+    offset_y = 0
     "Список для хранения снарядов"
 
 
@@ -486,8 +572,8 @@ def game():
                     # sin(заданный угол) возвращает значение противоположной (углу) стороны треугольника (катета), делённое на гипотенузу
                     # есть еще арктангенс для обеих осей
                     offset_x = barrel_offset[0] * math.cos(total_angle)
-                    offset_y = barrel_offset[0] * math.sin(total_angle)
-                    
+                    offset_y = barrel_offset[0] * -math.sin(total_angle)
+
                     # Так как наш корабль тоже поворачивается, надо это учитывать
                     direction_x = math.cos(total_angle) # -90, так как турель по умолчанию повернута вниз, а не вправо 
                     direction_y = -math.sin(total_angle)  # -math, т.к. Y растёт вниз
@@ -549,12 +635,15 @@ def game():
 
         render_ship(turret_angle=angle_turret, player_pos=(x,y), player_angle=angle_ship, full_rocket=full_rocket)
 
+
+        pygame.draw.line(screen, "green", (x+offset_x, y+offset_y), (x, y), 3)
+
         screen.blit(font_text.render("space - ракеты", True, "white"), (10, 10))
-        # screen.blit(font_text.render("q, e - поворот турели", True, "white"), (10, 30))
+        screen.blit(font_text.render("q, e - поворот турели", True, "white"), (10, 30))
         # screen.blit(font_text.render("w, s, a, d - движение", True, "white"), (10, 50))
         screen.blit(font_text.render("w, s - движение вперёд/назад", True, "white"), (10, 50))
         screen.blit(font_text.render("a, d - поворот корабля", True, "white"), (10, 70))
-        screen.blit(font_text.render("ПКМ - стрельба", True, "white"), (10, 70)) 
+        screen.blit(font_text.render("ПКМ - стрельба", True, "white"), (10, 90)) 
 
 
         update_projectile(projectiles)

@@ -1,0 +1,10 @@
+{
+    "volume": 0,
+    "fps": 30,
+    "image_scale": 1,
+    "frame_skip": true,
+    "fullscreen": false,
+    "grab_cursor": false,
+    "widht": 1000,
+    "height": 1000
+}

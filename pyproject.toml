@@ -8,5 +8,6 @@ dependencies = [
     "image>=1.5.33",
     "numpy>=2.2.3",
     "pillow>=11.1.0",
+    "pip>=25.0.1",
     "pygame-ce>=2.5.3",
 ]
